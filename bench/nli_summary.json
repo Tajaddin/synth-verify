@@ -1,0 +1,18 @@
+{
+  "n_generated": 200,
+  "heuristic_pass_rate": 0.995,
+  "verifier_pass_rate_of_those_reached": 0.6784,
+  "overall_pass_rate": 0.675,
+  "failure_breakdown": {
+    "verifier_rejected": 64,
+    "no_near_duplicate": 1
+  },
+  "verified_label_counts": {
+    "entailment": 111,
+    "neutral": 7,
+    "contradiction": 17
+  },
+  "gen_model": "llama-3.1-8b-instant",
+  "ver_model": "llama-3.3-70b-versatile",
+  "n_target": 200
+}
