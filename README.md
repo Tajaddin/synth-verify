@@ -1,6 +1,6 @@
 # synth-verify
 
-> Synthetic training-data pipeline with **separate-model verification** and structural heuristics. On a real 200-example NLI synthesis run with Llama-3.1-8B as generator and Llama-3.3-70B as verifier, the verifier rejects **32% of examples** as mislabeled or weakly grounded — the kind of errors that would poison a fine-tune.
+> Synthetic training-data pipeline with **separate-model verification** and structural heuristics. On a real 200-example NLI synthesis run with Llama-3.1-8B as generator and Llama-3.3-70B as verifier, the verifier judges **32% of the examples it reviews** (64 of 199) mislabeled or weakly grounded. That is the 70B model's judgement, not a measured mislabel rate: nothing here checks the verifier against human labels.
 
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE) [![Tests](https://img.shields.io/badge/tests-18%20passing-brightgreen)](#tests) [![Python](https://img.shields.io/badge/python-3.10%2B-blue)]()
 
@@ -12,7 +12,7 @@
 |---|---:|---|
 | **Generation** | 200 / 200 | 0 parse failures, batches of 5 with rotating topical seeds |
 | **Heuristic gate** | 199 / 200 (99.5%) | 1 near-duplicate caught by hash signature comparison |
-| **Verifier (Llama-3.3-70B)** | 135 / 199 (67.8%) | 64 examples rejected for label / entailment errors |
+| **Verifier (Llama-3.3-70B)** | 135 / 199 (67.8%) | 64 examples the verifier judged label / entailment errors |
 | **Overall verified** | **135 / 200 (67.5%)** | survives both gates |
 
 ### Rejections by label
@@ -171,7 +171,7 @@ Covers each heuristic check, hypothesis property tests on filters, generator par
 
 **The hero pass rate depends on generator quality.** With Llama-3.1-8B as the generator the verifier rejects 32% of examples. With a stronger generator (Claude Haiku, GPT-4o-mini) the rejection rate would drop — and conversely, with an even cheaper generator (3B-parameter local model) it would rise. The 67.5% number is honest for the cheapest-free-generator scenario, not the ceiling.
 
-**The verifier can be wrong too.** A separate LLM is a better second-opinion than the same model grading itself, but it's not ground truth. For tasks with subtle correct-label boundaries, gold-standard human review on a sample is the only ground truth — `synth-verify` shrinks the human-review burden by filtering obvious failures first.
+**The verifier can be wrong too.** A separate LLM is a better second-opinion than the same model grading itself, but it's not ground truth. Its precision is unmeasured here, so the 32% rejection rate is how often the 70B model rejected an example, not how many labels were wrong. For tasks with subtle correct-label boundaries, gold-standard human review on a sample is the only ground truth — `synth-verify` shrinks the human-review burden by filtering obvious failures first.
 
 **No downstream-classifier comparison wired in.** Project IDEAS.md set "verified examples outperform raw on a downstream classifier by ≥ 4 points" as a stretch goal. That's a separate experiment (train two classifiers, compare on a held-out test set) and out of scope for the v0.1 pipeline. The verifier rejection examples in the README make the case qualitatively.
 
