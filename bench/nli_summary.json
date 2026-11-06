@@ -12,6 +12,23 @@
     "neutral": 7,
     "contradiction": 17
   },
+  "verifier_rejections_by_label": {
+    "entailment": {
+      "reached": 140,
+      "rejected": 29,
+      "rejection_rate": 0.2071
+    },
+    "contradiction": {
+      "reached": 38,
+      "rejected": 21,
+      "rejection_rate": 0.5526
+    },
+    "neutral": {
+      "reached": 21,
+      "rejected": 14,
+      "rejection_rate": 0.6667
+    }
+  },
   "gen_model": "llama-3.1-8b-instant",
   "ver_model": "llama-3.3-70b-versatile",
   "n_target": 200

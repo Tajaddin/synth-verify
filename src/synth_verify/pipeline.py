@@ -86,6 +86,24 @@ class PipelineResult:
             return 0.0
         return sum(1 for e in reached if e.score.verifier_verified) / len(reached)
 
+    def verifier_rejections_by_label(self, label_field: str) -> dict[str, dict[str, float]]:
+        """Verifier outcome per generated label, over the examples that reached the verifier.
+
+        When rejection rates differ by label, the verified set has a different
+        label mix from what was generated, which a single pass rate hides.
+        """
+        by_label: dict[str, dict[str, float]] = {}
+        for ex in self.examples:
+            if ex.verifier is None:
+                continue
+            row = by_label.setdefault(str(ex.data.get(label_field, "?")), {"reached": 0, "rejected": 0})
+            row["reached"] += 1
+            if not ex.score.verifier_verified:
+                row["rejected"] += 1
+        for row in by_label.values():
+            row["rejection_rate"] = row["rejected"] / row["reached"]
+        return by_label
+
     def failure_breakdown(self) -> dict[str, int]:
         counts: dict[str, int] = {}
         for ex in self.examples:

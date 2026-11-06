@@ -132,6 +132,10 @@ def main() -> int:
         "overall_pass_rate": round(result.pass_rate, 4),
         "failure_breakdown": result.failure_breakdown(),
         "verified_label_counts": label_counts,
+        "verifier_rejections_by_label": {
+            label: {**row, "rejection_rate": round(row["rejection_rate"], 4)}
+            for label, row in result.verifier_rejections_by_label(spec.label_field).items()
+        },
         "gen_model": gen_client.model,
         "ver_model": ver_client.model,
         "n_target": args.n_examples,
