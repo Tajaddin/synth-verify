@@ -40,7 +40,7 @@ These are exactly the failure modes a fine-tune doesn't catch on its own — the
 
 ### What got through
 
-Verified examples are well-labeled and cover the rotating topical seeds:
+Examples the verifier accepted look like this, and cover the rotating topical seeds:
 
 ```
 {"premise":"Tomato sauce is a fundamental component of traditional Italian pasta dishes.",
@@ -169,7 +169,7 @@ Covers each heuristic check, hypothesis property tests on filters, generator par
 
 ## Limitations
 
-**The hero pass rate depends on generator quality.** With Llama-3.1-8B as the generator the verifier rejects 32% of examples. With a stronger generator (Claude Haiku, GPT-4o-mini) the rejection rate would drop — and conversely, with an even cheaper generator (3B-parameter local model) it would rise. The 67.5% number is honest for the cheapest-free-generator scenario, not the ceiling.
+**The hero pass rate depends on generator quality.** With Llama-3.1-8B as the generator the verifier rejects 32% of examples. A stronger generator (Claude Haiku, GPT-4o-mini) should lower the rejection rate and a cheaper one (a 3B-parameter local model) should raise it, but neither has been run. The 67.5% pass rate was measured with this one free generator.
 
 **The verifier can be wrong too.** A separate LLM is a better second-opinion than the same model grading itself, but it's not ground truth. Its precision is unmeasured here, so the 32% rejection rate is how often the 70B model rejected an example, not how many labels were wrong. For tasks with subtle correct-label boundaries, gold-standard human review on a sample is the only ground truth — `synth-verify` shrinks the human-review burden by filtering obvious failures first.
 
