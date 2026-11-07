@@ -103,6 +103,31 @@ def test_pipeline_records_verifier_reason_on_rejection() -> None:
     assert "unrelated" in ex.score.verifier_reason
 
 
+def test_verifier_rejections_by_label_only_counts_examples_that_reached_it() -> None:
+    spec = _spec()
+    examples = [
+        {"premise": "Dogs bark loudly.", "hypothesis": "Canines make noise.", "label": "entailment"},
+        {"premise": "The sky is blue.", "hypothesis": "The sky is green.", "label": "contradiction"},
+        {"premise": "Rain fell all day.", "hypothesis": "The match was cancelled.", "label": "neutral"},
+        {"premise": "Snow is cold.", "hypothesis": "Penguins enjoy jazz.", "label": "neutral"},
+        {"premise": "same text here", "hypothesis": "same text here", "label": "neutral"},  # leakage
+    ]
+
+    def ver_handler(prompt, system):
+        verdict = "NO" if '"label": "neutral"' in prompt else "YES"
+        return f"VERIFIED: {verdict}\nREASON: x"
+
+    gen = Generator(MockLLMClient(handler=lambda p, s: json.dumps(examples)), spec, batch_size=5)
+    ver = Verifier(MockLLMClient(model="v", handler=ver_handler), spec)
+    result = Pipeline(spec, gen, ver).run(5)
+
+    assert result.verifier_rejections_by_label("label") == {
+        "entailment": {"reached": 1, "rejected": 0, "rejection_rate": 0.0},
+        "contradiction": {"reached": 1, "rejected": 0, "rejection_rate": 0.0},
+        "neutral": {"reached": 2, "rejected": 2, "rejection_rate": 1.0},
+    }
+
+
 def test_pipeline_to_dict_round_trip() -> None:
     spec = _spec()
     examples = [

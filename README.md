@@ -1,8 +1,8 @@
 # synth-verify
 
-> Synthetic training-data pipeline with **separate-model verification** and structural heuristics. On a real 200-example NLI synthesis run with Llama-3.1-8B as generator and Llama-3.3-70B as verifier, the verifier rejects **32% of examples** as mislabeled or weakly grounded — the kind of errors that would poison a fine-tune.
+> Synthetic training-data pipeline with **separate-model verification** and structural heuristics. On a real 200-example NLI synthesis run with Llama-3.1-8B as generator and Llama-3.3-70B as verifier, the verifier judges **32% of the examples it reviews** (64 of 199) mislabeled or weakly grounded. That is the 70B model's judgement, not a measured mislabel rate: nothing here checks the verifier against human labels.
 
-[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE) [![Tests](https://img.shields.io/badge/tests-17%20passing-brightgreen)](#tests) [![Python](https://img.shields.io/badge/python-3.10%2B-blue)]()
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE) [![Tests](https://img.shields.io/badge/tests-18%20passing-brightgreen)](#tests) [![Python](https://img.shields.io/badge/python-3.10%2B-blue)]()
 
 ## Hero benchmark
 
@@ -12,8 +12,20 @@
 |---|---:|---|
 | **Generation** | 200 / 200 | 0 parse failures, batches of 5 with rotating topical seeds |
 | **Heuristic gate** | 199 / 200 (99.5%) | 1 near-duplicate caught by hash signature comparison |
-| **Verifier (Llama-3.3-70B)** | 135 / 199 (67.8%) | 64 examples rejected for label / entailment errors |
-| **Overall verified** | **135 / 200 (67.5%)** | survives both gates → ready for fine-tuning |
+| **Verifier (Llama-3.3-70B)** | 135 / 199 (67.8%) | 64 examples the verifier judged label / entailment errors |
+| **Overall verified** | **135 / 200 (67.5%)** | survives both gates |
+
+### Rejections by label
+
+The verifier is far harsher on some labels than others (`verifier_rejections_by_label` in [`bench/nli_summary.json`](bench/nli_summary.json), counted from [`bench/nli_examples.jsonl`](bench/nli_examples.jsonl)):
+
+| Generated label | Reached verifier | Rejected | Rejection rate |
+|---|---:|---:|---:|
+| entailment | 140 | 29 | 20.7% |
+| contradiction | 38 | 21 | 55.3% |
+| neutral | 21 | 14 | 66.7% |
+
+So filtering skews the label mix: the verified set is 82% entailment (111 of 135), against 70.5% (141 of 200) of the raw generations. Rebalance it before fine-tuning on it.
 
 ### What the verifier actually caught
 
@@ -28,7 +40,7 @@ These are exactly the failure modes a fine-tune doesn't catch on its own — the
 
 ### What got through
 
-Verified examples are well-labeled and cover the rotating topical seeds:
+Examples the verifier accepted look like this, and cover the rotating topical seeds:
 
 ```
 {"premise":"Tomato sauce is a fundamental component of traditional Italian pasta dishes.",
@@ -131,10 +143,10 @@ pytest -q
 ```
 
 ```
-17 passed in 4.78s
+18 passed in 1.67s
 ```
 
-Covers each heuristic check, hypothesis property tests on filters, generator parsing (clean JSON, fenced JSON, unparseable input), verifier parsing (including the `parse_failed` path), pipeline end-to-end on mocks, the "different LLM instance" guard, and the to_dict round-trip.
+Covers each heuristic check, hypothesis property tests on filters, generator parsing (clean JSON, fenced JSON, unparseable input), verifier parsing (including the `parse_failed` path), pipeline end-to-end on mocks, per-label verifier rejection counts, the "different LLM instance" guard, and the to_dict round-trip.
 
 ## Project layout
 
@@ -148,7 +160,7 @@ Covers each heuristic check, hypothesis property tests on filters, generator par
 │   ├── verifier.py     # Separate-LLM verifier with strict prompt
 │   ├── checks.py       # Heuristic gates (leakage, format, dup, length)
 │   └── pipeline.py     # Pipeline glue + PipelineResult / Example
-├── tests/              # 17 pytest cases
+├── tests/              # 18 pytest cases
 └── bench/
     ├── nli_synth.py             # 200-example NLI synthesis benchmark
     ├── nli_examples.jsonl       # raw output with full audit metadata
@@ -157,9 +169,9 @@ Covers each heuristic check, hypothesis property tests on filters, generator par
 
 ## Limitations
 
-**The hero pass rate depends on generator quality.** With Llama-3.1-8B as the generator the verifier rejects 32% of examples. With a stronger generator (Claude Haiku, GPT-4o-mini) the rejection rate would drop — and conversely, with an even cheaper generator (3B-parameter local model) it would rise. The 67.5% number is honest for the cheapest-free-generator scenario, not the ceiling.
+**The hero pass rate depends on generator quality.** With Llama-3.1-8B as the generator the verifier rejects 32% of examples. A stronger generator (Claude Haiku, GPT-4o-mini) should lower the rejection rate and a cheaper one (a 3B-parameter local model) should raise it, but neither has been run. The 67.5% pass rate was measured with this one free generator.
 
-**The verifier can be wrong too.** A separate LLM is a better second-opinion than the same model grading itself, but it's not ground truth. For tasks with subtle correct-label boundaries, gold-standard human review on a sample is the only ground truth — `synth-verify` shrinks the human-review burden by filtering obvious failures first.
+**The verifier can be wrong too.** A separate LLM is a better second-opinion than the same model grading itself, but it's not ground truth. Its precision is unmeasured here, so the 32% rejection rate is how often the 70B model rejected an example, not how many labels were wrong. For tasks with subtle correct-label boundaries, gold-standard human review on a sample is the only ground truth — `synth-verify` shrinks the human-review burden by filtering obvious failures first.
 
 **No downstream-classifier comparison wired in.** Project IDEAS.md set "verified examples outperform raw on a downstream classifier by ≥ 4 points" as a stretch goal. That's a separate experiment (train two classifiers, compare on a held-out test set) and out of scope for the v0.1 pipeline. The verifier rejection examples in the README make the case qualitatively.
 
